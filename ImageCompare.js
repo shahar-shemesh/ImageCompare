@@ -21,13 +21,27 @@ async function ensureDir(dir) {
     await fs.promises.mkdir(dir, { recursive: true });
 }
 
-async function pixelHash(file) {
-    const { data } = await sharp(file).raw().toBuffer({ resolveWithObject: true });
-    const hash = crypto.createHash("sha256");
-    hash.update(data);
-    return hash.digest("hex");
+async function writeLog(message) {
+    const line = `${new Date().toISOString()} | ${message}\n`;
+    await fs.promises.appendFile("logs.txt", line);
 }
 
+async function pixelHash(file) {
+    try {
+        const { data } = await sharp(file).raw().toBuffer({ resolveWithObject: true });
+        const hash = crypto.createHash("sha256");
+        hash.update(data);
+        return hash.digest("hex");
+    } catch (err) {
+        await writeLog(`PIXEL HASH FAILED | ${file} | ${err.message}`);
+
+        // fallback to calculating the hash of the file
+        const buffer = await fs.promises.readFile(file);
+        const hash = crypto.createHash("sha256");
+        hash.update(buffer);
+        return hash.digest("hex");
+    }
+}
 async function run() {
 
     await ensureDir(outputDir);
@@ -37,6 +51,8 @@ async function run() {
 
     const oldSet = new Set(oldFiles);
 
+    const imageExtensions = new Set([".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".gif"]);
+
     for (const file of newFiles) {
 
         const newPath = path.join(newDir, file);
@@ -44,7 +60,12 @@ async function run() {
         const outPath = path.join(outputDir, file);
 
         const newStat = await fs.promises.stat(newPath);
-        if (!newStat.isFile()) continue;
+        const ext = path.extname(file).toLowerCase();
+
+        // if the file is not a file or not an image, skip it
+        if (!newStat.isFile() || !imageExtensions.has(ext)) {
+            continue;
+        }
 
         // if file is not in the old folder, copy it to the output directory
         if (!oldSet.has(file)) {
@@ -72,6 +93,7 @@ async function run() {
             await fs.promises.copyFile(newPath, outPath);
             console.log("Copied pixel changed:", file);
         }
+
     }
 
     console.log("Finished");

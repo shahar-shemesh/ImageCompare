@@ -27,6 +27,12 @@ dist-ssr
 
 
 ## Folders
+# Ignore any folder (all nested content, recursively)
+*/
+# Or just all directories
+*/
+
+
 result
 azure-fallenimages
 green
