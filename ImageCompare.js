@@ -93,7 +93,18 @@ async function run() {
             await fs.promises.copyFile(newPath, outPath);
             console.log("Copied pixel changed:", file);
         }
+        else {
 
+            /// before this date, we don't want to copy the file
+
+            // const fromDate = Date.now() - (384 * 24 * 60 * 60 * 1000); //// check if the file was created during the last 365 days
+
+            const fromDate = new Date(2025, 3, 22);
+            if (oldStat.birthtime.getTime() >= fromDate.getTime()) {
+                await fs.promises.copyFile(newPath, outPath);
+                console.log("Copied recent file:", file);
+            }
+        }
     }
 
     console.log("Finished");
